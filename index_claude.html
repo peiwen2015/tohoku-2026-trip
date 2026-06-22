@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>福島・仙台五天四夜自駕行程地圖｜懸停景點卡版</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","Microsoft JhengHei",sans-serif; background:#f7f7f7; }
+  #map { width:100vw; height:100vh; }
+  .title-box {
+    position:absolute; z-index:999; top:14px; left:14px; 
+    background:rgba(255,255,255,0.95); padding:14px 16px; border-radius:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.18); max-width:420px; line-height:1.45;
+  }
+  .title-box h1 { font-size:18px; margin:0 0 6px 0; }
+  .title-box p { font-size:13px; margin:0; color:#444; }
+  .legend {
+    position:absolute; z-index:999; bottom:24px; left:14px; background:rgba(255,255,255,0.95);
+    padding:12px 14px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.18); font-size:13px;
+  }
+  .legend div { margin:5px 0; }
+  .swatch { display:inline-block; width:13px; height:13px; border-radius:50%; margin-right:7px; vertical-align:-2px; }
+  .marker-label {
+    color:#fff; font-weight:800; font-size:12px; line-height:26px; text-align:center;
+    width:32px; height:26px; border-radius:16px; border:2px solid #fff;
+    box-shadow:0 2px 7px rgba(0,0,0,.35); letter-spacing:-0.5px;
+  }
+  .leaflet-popup-content-wrapper { border-radius:16px; padding:0; overflow:hidden; }
+  .leaflet-popup-content { margin:0; width:286px !important; }
+  .place-card { width:286px; background:#fff; }
+  .visual {
+    width:286px; height:158px; display:flex; align-items:center; justify-content:center;
+    color:#fff; position:relative; overflow:hidden;
+  }
+  .visual:before {
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(circle at 22% 20%, rgba(255,255,255,.45), transparent 28%),
+               linear-gradient(0deg, rgba(0,0,0,.25), rgba(0,0,0,.05));
+  }
+  .visual .emoji { position:relative; font-size:54px; filter:drop-shadow(0 5px 8px rgba(0,0,0,.35)); }
+  .visual .caption {
+    position:absolute; left:12px; bottom:10px; right:12px; color:#fff; font-weight:800;
+    font-size:15px; text-shadow:0 2px 8px rgba(0,0,0,.55);
+  }
+  .place-body { padding:10px 12px 12px 12px; }
+  .place-title { font-weight:800; font-size:15px; line-height:1.3; margin-bottom:4px; }
+  .place-day { color:#666; font-size:12px; margin-bottom:7px; }
+  .place-note { color:#333; font-size:13px; line-height:1.45; }
+  .hint {
+    position:absolute; z-index:999; top:104px; left:14px;
+    background:rgba(35,35,35,0.82); color:#fff; padding:8px 12px; border-radius:999px;
+    font-size:12px; box-shadow:0 6px 18px rgba(0,0,0,.18);
+  }
+</style>
+</head>
+<body>
+<div class="title-box">
+  <h1>福島・仙台 5天4夜 自駕行程地圖</h1>
+  <p>滑鼠移到景點標記即可顯示說明卡。這版改為內嵌式代表圖卡，不依賴外部照片連結，因此不會再出現照片失效問題。</p>
+</div>
+<div class="hint">桌機：滑鼠移到標記預覽｜手機：點擊標記查看</div>
+<div id="map"></div>
+<div class="legend" id="legend"></div>
+
+<script>
+const points = [{"day": "Day 1｜6/26（五）", "order": "1-1", "name": "福島機場", "lat": 37.2274, "lon": 140.431, "note": "抵達福島機場，辦理取車手續。", "theme": "airport", "emoji": "✈️", "bg": "linear-gradient(135deg,#7cc7ff,#eef8ff 55%,#b6d9ff)"}, {"day": "Day 1｜6/26（五）", "order": "1-2", "name": "阿武隈洞", "lat": 37.3577, "lon": 140.7119, "note": "鐘乳石洞探險，並順遊薰衣草草花海。", "theme": "cave", "emoji": "🪨", "bg": "radial-gradient(circle at 35% 20%,#d9c6a1,#5b4a3f 50%,#241f1c)"}, {"day": "Day 1｜6/26（五）", "order": "1-3", "name": "郡山車站／郡山市區", "lat": 37.3986, "lon": 140.3888, "note": "晚餐、S-PAL 購物與市區住宿。", "theme": "city", "emoji": "🚉", "bg": "linear-gradient(135deg,#26354a,#8093ad 60%,#f5d6a2)"}, {"day": "Day 2｜6/27（六）", "order": "2-1", "name": "豬苗代湖長濱", "lat": 37.4915, "lon": 140.129, "note": "湖畔沙灘散步，遠眺磐梯山。", "theme": "lake", "emoji": "🌊", "bg": "linear-gradient(135deg,#6fd3ff,#3187c8 50%,#174e7a)"}, {"day": "Day 2｜6/27（六）", "order": "2-2", "name": "會津螺旋堂", "lat": 37.5114, "lon": 139.949, "note": "參觀木造雙螺旋結構佛堂，體驗上下樓不相遇的動線。", "theme": "temple", "emoji": "🏯", "bg": "linear-gradient(135deg,#b17b42,#ead8b7 55%,#6d3b20)"}, {"day": "Day 2｜6/27（六）", "order": "2-3", "name": "喜多方老街", "lat": 37.651, "lon": 139.874, "note": "喜多方拉麵午餐，藏造老街散策。", "theme": "oldstreet", "emoji": "🍜", "bg": "linear-gradient(135deg,#8b5e3c,#d7b98e 55%,#4a2c1a)"}, {"day": "Day 2｜6/27（六）", "order": "2-4", "name": "五色沼湖沼群", "lat": 37.658, "lon": 140.084, "note": "初夏魔幻湖泊，欣賞不同色彩的湖沼。", "theme": "pond", "emoji": "💧", "bg": "linear-gradient(135deg,#2fbf9f,#86e6d4 45%,#1f78c1)"}, {"day": "Day 2｜6/27（六）", "order": "2-5", "name": "裏磐梯溫泉", "lat": 37.6555, "lon": 140.065, "note": "入住裏磐梯溫泉飯店，享受溫泉與自助晚餐。", "theme": "onsen", "emoji": "♨️", "bg": "linear-gradient(135deg,#e3e1dc,#a9b7c7 55%,#f2b6a0)"}, {"day": "Day 3｜6/28（日）", "order": "3-1", "name": "達澤不動瀑布", "lat": 37.607, "lon": 140.226, "note": "森林秘境瀑布，水流如白絲緞般落下。", "theme": "waterfall", "emoji": "🏞️", "bg": "linear-gradient(135deg,#1b6b55,#c9f4ff 48%,#2b8a9c)"}, {"day": "Day 3｜6/28（日）", "order": "3-2", "name": "磐梯吾妻 Skyline／浄土平", "lat": 37.722, "lon": 140.254, "note": "火山景觀道路、浄土平與吾妻小富士。", "theme": "volcano", "emoji": "🌋", "bg": "linear-gradient(135deg,#3b3b3b,#9c8d78 55%,#e2d4bc)"}, {"day": "Day 3｜6/28（日）", "order": "3-3", "name": "土合舘公園", "lat": 37.741, "lon": 140.437, "note": "繡球花秘境，適合初夏散策與拍照。", "theme": "hydrangea", "emoji": "🌸", "bg": "linear-gradient(135deg,#9b8cff,#ffc0df 55%,#7bcf9a)"}, {"day": "Day 3｜6/28（日）", "order": "3-4", "name": "福島市／聖安納水果塔", "lat": 37.7608, "lon": 140.4747, "note": "品嚐季節限定水果甜點，6 月可留意水蜜桃甜點。", "theme": "dessert", "emoji": "🍰", "bg": "linear-gradient(135deg,#ffd1dc,#fff0b8 55%,#ff8fab)"}, {"day": "Day 3｜6/28（日）", "order": "3-5", "name": "白石城", "lat": 38.0035, "lon": 140.6247, "note": "加碼散策，參觀木造復原天守。", "theme": "castle", "emoji": "🏯", "bg": "linear-gradient(135deg,#33415c,#f1f4f8 55%,#9aa4b2)"}, {"day": "Day 3｜6/28（日）", "order": "3-6", "name": "白石車站周邊住宿", "lat": 38.0027, "lon": 140.622, "note": "入住白石車站前現代商旅。", "theme": "hotel", "emoji": "🏨", "bg": "linear-gradient(135deg,#485563,#d7dde8 55%,#29323c)"}, {"day": "Day 4｜6/29（一）", "order": "4-1", "name": "宮城藏王狐狸村", "lat": 38.07, "lon": 140.545, "note": "日本知名狐狸村，可觀察狐狸與拍照。", "theme": "fox", "emoji": "🦊", "bg": "linear-gradient(135deg,#ff9a3d,#f6d365 55%,#5c2a09)"}, {"day": "Day 4｜6/29（一）", "order": "4-2", "name": "藏王御釜", "lat": 38.135, "lon": 140.45, "note": "火山口湖，天氣好時可見翡翠綠湖面。", "theme": "crater", "emoji": "🟢", "bg": "linear-gradient(135deg,#415d43,#8fd694 45%,#2e8b57)"}, {"day": "Day 4｜6/29（一）", "order": "4-3", "name": "秋保溫泉", "lat": 38.228, "lon": 140.714, "note": "入住秋保溫泉旅館，享受古湯與日式會席。", "theme": "onsen", "emoji": "♨️", "bg": "linear-gradient(135deg,#e3e1dc,#a9b7c7 55%,#f2b6a0)"}, {"day": "Day 5｜6/30（二）", "order": "5-1", "name": "秋保大瀑布", "lat": 38.272, "lon": 140.595, "note": "日本百大名瀑之一，落差約 55 公尺。", "theme": "waterfall", "emoji": "🏞️", "bg": "linear-gradient(135deg,#1b6b55,#c9f4ff 48%,#2b8a9c)"}, {"day": "Day 5｜6/30（二）", "order": "5-2", "name": "磊磊峽", "lat": 38.2225, "lon": 140.7195, "note": "沿溪谷步道散策，初夏可結合繡球花與溪谷景觀。", "theme": "gorge", "emoji": "🌿", "bg": "linear-gradient(135deg,#2d6a4f,#95d5b2 55%,#1b4332)"}, {"day": "Day 5｜6/30（二）", "order": "5-3", "name": "秋保手作舍 治部牛舌", "lat": 38.226, "lon": 140.715, "note": "音浴館、手作體驗與牛舌午餐。", "theme": "food", "emoji": "🥩", "bg": "linear-gradient(135deg,#7f4f24,#f2cc8f 55%,#d95d39)"}, {"day": "Day 5｜6/30（二）", "order": "5-4", "name": "永旺夢樂城名取", "lat": 38.165, "lon": 140.889, "note": "大型購物中心，適合返程前採購。", "theme": "mall", "emoji": "🛍️", "bg": "linear-gradient(135deg,#667eea,#764ba2 55%,#f6d365)"}, {"day": "Day 5｜6/30（二）", "order": "5-5", "name": "仙台機場", "lat": 38.1397, "lon": 140.9171, "note": "還車、搭機返程。", "theme": "airport", "emoji": "✈️", "bg": "linear-gradient(135deg,#7cc7ff,#eef8ff 55%,#b6d9ff)"}];
+const colors = {"Day 1｜6/26（五）": "#1f77b4", "Day 2｜6/27（六）": "#2ca02c", "Day 3｜6/28（日）": "#ff7f0e", "Day 4｜6/29（一）": "#d62728", "Day 5｜6/30（二）": "#9467bd"};
+
+const map = L.map('map', { zoomControl: true }).setView([37.82938, 140.44617], 8);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m];
+  });
+}
+
+function popupHtml(p) {
+  return `<div class="place-card">
+    <div class="visual" style="background:${p.bg}">
+      <div class="emoji">${escapeHtml(p.emoji)}</div>
+      <div class="caption">${escapeHtml(p.name)}</div>
+    </div>
+    <div class="place-body">
+      <div class="place-title">${escapeHtml(p.order)}｜${escapeHtml(p.name)}</div>
+      <div class="place-day">${escapeHtml(p.day)}</div>
+      <div class="place-note">${escapeHtml(p.note)}</div>
+    </div>
+  </div>`;
+}
+
+const grouped = {};
+points.forEach(p => {
+  if (!grouped[p.day]) grouped[p.day] = [];
+  grouped[p.day].push(p);
+});
+
+const allLatLngs = [];
+
+Object.keys(grouped).forEach(day => {
+  const color = colors[day] || '#333';
+  const latlngs = grouped[day].map(p => [p.lat, p.lon]);
+  allLatLngs.push(...latlngs);
+
+  L.polyline(latlngs, {
+    color: color,
+    weight: 5,
+    opacity: 0.78,
+    smoothFactor: 1
+  }).addTo(map);
+
+  grouped[day].forEach(p => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="marker-label" style="background:${color}">${p.order}</div>`,
+      iconSize: [38,30],
+      iconAnchor: [19,15],
+      popupAnchor: [0,-14]
+    });
+
+    const marker = L.marker([p.lat, p.lon], { icon }).addTo(map);
+    marker.bindPopup(popupHtml(p), {
+      closeButton: false,
+      autoPan: true,
+      maxWidth: 310,
+      offset: L.point(0, -8)
+    });
+
+    marker.on('mouseover', function() { this.openPopup(); });
+    marker.on('click', function() { this.openPopup(); });
+    marker.on('mouseout', function() {
+      const m = this;
+      setTimeout(() => {
+        const popupEl = document.querySelector('.leaflet-popup');
+        if (!popupEl || !popupEl.matches(':hover')) m.closePopup();
+      }, 180);
+    });
+  });
+});
+
+map.on('popupopen', function(e) {
+  const popupEl = e.popup.getElement();
+  if (popupEl) {
+    popupEl.addEventListener('mouseleave', () => {
+      setTimeout(() => map.closePopup(e.popup), 180);
+    });
+  }
+});
+
+L.polyline(points.map(p => [p.lat, p.lon]), {
+  color: '#222',
+  weight: 2,
+  opacity: 0.35,
+  dashArray: '8, 10'
+}).addTo(map);
+
+map.fitBounds(L.latLngBounds(allLatLngs), {padding: [45,45]});
+
+const legend = document.getElementById('legend');
+legend.innerHTML = '<b>日期圖例</b>' + Object.keys(colors).map(day =>
+  `<div><span class="swatch" style="background:${colors[day]}"></span>${day}</div>`
+).join('');
+</script>
+</body>
+</html>
